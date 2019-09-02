@@ -66,24 +66,26 @@ namespace PasswordHasher
 
             string selectQueryString = "SELECT TOP (@maxNum) [Id], [Password] FROM Users WHERE [Password] IS NOT NULL AND [Password] NOT LIKE '%$_' AND LEN([Password]) = 64";
 
-            SqlCommand command = new SqlCommand(selectQueryString, (SqlConnection)connection);
-            command.Parameters.AddWithValue("@maxNum", maxNum);
-            SqlDataReader reader = command.ExecuteReader();
+            using (SqlCommand command = new SqlCommand(selectQueryString, (SqlConnection)connection))
+            {
+                command.Parameters.AddWithValue("@maxNum", maxNum);
+                SqlDataReader reader = command.ExecuteReader();
 
-            try
-            {
-                while (reader.Read())
+                try
                 {
-                    userPasswords.Add(new UserPasswordDto
+                    while (reader.Read())
                     {
-                        Id = (long)reader["Id"],
-                        CurrentPassword = (string)reader["Password"]
-                    });
+                        userPasswords.Add(new UserPasswordDto
+                        {
+                            Id = (long)reader["Id"],
+                            CurrentPassword = (string)reader["Password"]
+                        });
+                    }
                 }
-            }
-            finally
-            {
-                reader.Close();
+                finally
+                {
+                    reader.Close();
+                }
             }
 
             return userPasswords;
@@ -98,17 +100,19 @@ namespace PasswordHasher
         {
             string updateQueryString = "UPDATE Users SET Password = @password WHERE Id = @id AND Password = @currentPassword";
 
-            SqlCommand updateCommand = new SqlCommand(updateQueryString, (SqlConnection)connection);
-            updateCommand.Parameters.AddWithValue("@id", user.Id);
-            updateCommand.Parameters.AddWithValue("@password", user.Password);
-            updateCommand.Parameters.AddWithValue("@currentPassword", user.CurrentPassword);
-            try
+            using (SqlCommand updateCommand = new SqlCommand(updateQueryString, (SqlConnection)connection))
             {
-                updateCommand.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception while updating User {user.Id}, Ex: {ex}");
+                updateCommand.Parameters.AddWithValue("@id", user.Id);
+                updateCommand.Parameters.AddWithValue("@password", user.Password);
+                updateCommand.Parameters.AddWithValue("@currentPassword", user.CurrentPassword);
+                try
+                {
+                    updateCommand.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception while updating User {user.Id}, Ex: {ex}");
+                }
             }
         }
 
@@ -160,8 +164,10 @@ namespace PasswordHasher
             {
                 await connection.OpenAsync();
                 string queryString = "SELECT Count(*) as PwCount FROM Users WHERE [Password] IS NOT NULL AND [Password] NOT LIKE '%$_' AND LEN([Password]) = 64";
-                SqlCommand command = new SqlCommand(queryString, connection);
-                count = (int)await command.ExecuteScalarAsync();
+                using (SqlCommand command = new SqlCommand(queryString, connection))
+                {
+                    count = (int)await command.ExecuteScalarAsync();
+                }
             }
             return count;
         }
